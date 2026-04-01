@@ -31,5 +31,14 @@ app.post('/api/tickets', async (req, res) => {
     res.status(400).json({ message: err.message });
   }
 });
+// API Route: Delete a ticket by its ID
+app.delete('/api/tickets/:id', async (req, res) => {
+  try {
+    await Ticket.findByIdAndDelete(req.params.id);
+    res.json({ message: "Ticket deleted successfully" });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
 const PORT = 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
