@@ -21,6 +21,15 @@ app.get('/api/tickets', async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 });
-
+// API Route: Receive a new ticket from the frontend and save it
+app.post('/api/tickets', async (req, res) => {
+  try {
+    const newTicket = new Ticket(req.body);
+    const savedTicket = await newTicket.save();
+    res.status(201).json(savedTicket);
+  } catch (err) {
+    res.status(400).json({ message: err.message });
+  }
+});
 const PORT = 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
