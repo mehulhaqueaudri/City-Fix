@@ -1,7 +1,9 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
-const Ticket = require('./models/Ticket'); 
+
+// Import the routes
+const ticketRoutes = require('./routes/ticketRoutes'); 
 
 const app = express();
 app.use(cors());
@@ -12,33 +14,8 @@ mongoose.connect('mongodb://127.0.0.1:27017/cityfix')
   .then(() => console.log("MongoDB Connected"))
   .catch(err => console.log(err));
 
-// API Route: Send tickets to the frontend
-app.get('/api/tickets', async (req, res) => {
-  try {
-    const tickets = await Ticket.find().sort({ createdAt: -1 });
-    res.json(tickets);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
-// API Route: Receive a new ticket from the frontend and save it
-app.post('/api/tickets', async (req, res) => {
-  try {
-    const newTicket = new Ticket(req.body);
-    const savedTicket = await newTicket.save();
-    res.status(201).json(savedTicket);
-  } catch (err) {
-    res.status(400).json({ message: err.message });
-  }
-});
-// API Route: Delete a ticket by its ID
-app.delete('/api/tickets/:id', async (req, res) => {
-  try {
-    await Ticket.findByIdAndDelete(req.params.id);
-    res.json({ message: "Ticket deleted successfully" });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
+// Use the routes (This tells the app to use ticketRoutes for anything starting with /api/tickets)
+app.use('/api/tickets', ticketRoutes);
+
 const PORT = 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
