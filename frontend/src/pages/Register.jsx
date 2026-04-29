@@ -21,7 +21,7 @@ const Register = () => {
     e.preventDefault();
     setMessage(''); // Clear any previous messages
     try {
-      await axios.post('http://localhost:5000/api/auth/register', formData);
+      await axios.post('https://cityfix-backend-2c0d.onrender.com/api/auth/register', formData);
       
       // FIXED: Hardcoded success string so it no longer says 'undefined'
       setMessage("✅ Account created successfully! Redirecting to login...");

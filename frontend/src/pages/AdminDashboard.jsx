@@ -35,42 +35,42 @@ const AdminDashboard = () => {
 
   const fetchAllTickets = async () => {
     try {
-      const response = await axios.get('http://localhost:5000/api/tickets');
+      const response = await axios.get('https://cityfix-backend-2c0d.onrender.com/api/tickets');
       setTickets(response.data);
     } catch (error) { console.error(error); }
   };
 
   const fetchInventory = async () => {
     try {
-      const response = await axios.get('http://localhost:5000/api/inventory');
+      const response = await axios.get('https://cityfix-backend-2c0d.onrender.com/api/inventory');
       setInventory(response.data);
     } catch (error) { console.error(error); }
   };
 
   const fetchAllWorkers = async () => {
     try {
-      const response = await axios.get('http://localhost:5000/api/workers');
+      const response = await axios.get('https://cityfix-backend-2c0d.onrender.com/api/workers');
       setAllWorkers(response.data);
     } catch (error) { console.error(error); }
   };
 
   const fetchInventoryRequests = async () => {
     try {
-      const response = await axios.get('http://localhost:5000/api/system/inventory-requests');
+      const response = await axios.get('https://cityfix-backend-2c0d.onrender.com/api/system/inventory-requests');
       setInventoryRequests(response.data);
     } catch (error) { console.error(error); }
   };
 
   const fetchAuditLogs = async () => {
     try {
-      const response = await axios.get('http://localhost:5000/api/system/audit-logs');
+      const response = await axios.get('https://cityfix-backend-2c0d.onrender.com/api/system/audit-logs');
       setAuditLogs(response.data);
     } catch (error) { console.error(error); }
   };
 
   const handleApproveRequest = async (id, status) => {
     try {
-      await axios.put(`http://localhost:5000/api/system/inventory-requests/${id}`, { status });
+      await axios.put(`https://cityfix-backend-2c0d.onrender.com/api/system/inventory-requests/${id}`, { status });
       fetchInventoryRequests();
       if (status === 'Approved') fetchInventory(); 
     } catch (error) { alert("❌ Failed to update request."); }
@@ -80,7 +80,7 @@ const AdminDashboard = () => {
     e.preventDefault();
     if(!broadcastMessage) return;
     try {
-      await axios.post('http://localhost:5000/api/system/notifications/broadcast', { message: `📢 MAYOR BROADCAST: ${broadcastMessage}` });
+      await axios.post('https://cityfix-backend-2c0d.onrender.com/api/system/notifications/broadcast', { message: `📢 MAYOR BROADCAST: ${broadcastMessage}` });
       alert("✅ Broadcast sent to all workers!");
       setBroadcastMessage('');
     } catch (error) { alert("❌ Failed to send broadcast."); }
@@ -89,7 +89,7 @@ const AdminDashboard = () => {
   const handleAddMaterial = async (e) => {
     e.preventDefault();
     try {
-      await axios.post('http://localhost:5000/api/inventory', {
+      await axios.post('https://cityfix-backend-2c0d.onrender.com/api/inventory', {
         itemName: newItemName, costPerUnit: Number(newCostPerUnit), quantity: Number(newQuantity)
       });
       setInventoryMessage('✅ Material registered successfully!');
@@ -102,7 +102,7 @@ const AdminDashboard = () => {
   const handleMayorAssign = async (ticketId, workerName) => {
     if(!workerName) return;
     try {
-      await axios.put(`http://localhost:5000/api/tickets/${ticketId}/admin-assign`, { workerName });
+      await axios.put(`https://cityfix-backend-2c0d.onrender.com/api/tickets/${ticketId}/admin-assign`, { workerName });
       alert(`Ticket assigned to ${workerName} and locked.`);
       fetchAllTickets();
       fetchAuditLogs();

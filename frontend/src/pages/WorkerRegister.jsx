@@ -15,7 +15,7 @@ const WorkerRegister = () => {
     setError('');
 
     try {
-      const response = await axios.post('http://localhost:5000/api/auth/worker/register', {
+      const response = await axios.post('https://cityfix-backend-2c0d.onrender.com/api/auth/worker/register', {
         name, email, password, wardNumber
       });
 

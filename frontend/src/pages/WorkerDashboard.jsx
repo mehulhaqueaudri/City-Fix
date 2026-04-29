@@ -41,14 +41,14 @@ const WorkerDashboard = () => {
 
   const fetchAllTickets = async () => {
     try {
-      const response = await axios.get('http://localhost:5000/api/tickets');
+      const response = await axios.get('https://cityfix-backend-2c0d.onrender.com/api/tickets');
       setTickets(response.data);
     } catch (error) { console.error(error); }
   };
 
   const fetchInventoryList = async () => {
     try {
-      const response = await axios.get('http://localhost:5000/api/inventory');
+      const response = await axios.get('https://cityfix-backend-2c0d.onrender.com/api/inventory');
       setInventoryList(response.data);
     } catch (error) { console.error(error); }
   };
@@ -56,14 +56,14 @@ const WorkerDashboard = () => {
   const fetchNotifications = async () => {
     if (!worker) return;
     try {
-      const response = await axios.get(`http://localhost:5000/api/system/notifications/${worker.name}`);
+      const response = await axios.get(`https://cityfix-backend-2c0d.onrender.com/api/system/notifications/${worker.name}`);
       setNotifications(response.data);
     } catch (error) { console.error(error); }
   };
 
   const markNotificationRead = async (id) => {
     try {
-      await axios.put(`http://localhost:5000/api/system/notifications/${id}/read`);
+      await axios.put(`https://cityfix-backend-2c0d.onrender.com/api/system/notifications/${id}/read`);
       fetchNotifications();
     } catch (error) { console.error(error); }
   };
@@ -72,7 +72,7 @@ const WorkerDashboard = () => {
     e.preventDefault();
     if (!reqItemName || !reqQuantity || !reqCostPerUnit) return;
     try {
-      await axios.post('http://localhost:5000/api/system/inventory-requests', {
+      await axios.post('https://cityfix-backend-2c0d.onrender.com/api/system/inventory-requests', {
         workerName: worker.name, itemName: reqItemName, quantity: Number(reqQuantity), costPerUnit: Number(reqCostPerUnit)
       });
       setMessage('📦 Inventory Request sent to Mayor!');
@@ -83,7 +83,7 @@ const WorkerDashboard = () => {
   const handleShiftToggle = async () => {
     if (!worker) return;
     try {
-      const response = await axios.put(`http://localhost:5000/api/workers/${worker._id}/toggle`);
+      const response = await axios.put(`https://cityfix-backend-2c0d.onrender.com/api/workers/${worker._id}/toggle`);
       const updatedWorker = { ...worker, status: response.data.status };
       setWorker(updatedWorker); 
       localStorage.setItem('user', JSON.stringify(updatedWorker));
@@ -95,7 +95,7 @@ const WorkerDashboard = () => {
   // 🧠 UPDATED: Now passes the worker.name to the Audit Log!
   const handleStatusChange = async (ticketId, newStatus) => {
     try {
-      await axios.put(`http://localhost:5000/api/tickets/${ticketId}/status`, { 
+      await axios.put(`https://cityfix-backend-2c0d.onrender.com/api/tickets/${ticketId}/status`, { 
         status: newStatus,
         changedBy: worker.name // Tells the shadow table exactly who clicked this!
       });
@@ -107,7 +107,7 @@ const WorkerDashboard = () => {
   const handleRejectTask = async (ticketId) => {
     if(!window.confirm("Are you sure you want to remove this task?")) return;
     try {
-      await axios.put(`http://localhost:5000/api/tickets/${ticketId}/reject`, { workerName: worker.name });
+      await axios.put(`https://cityfix-backend-2c0d.onrender.com/api/tickets/${ticketId}/reject`, { workerName: worker.name });
       setMessage(`Task returned to dispatch queue.`);
       fetchAllTickets();
     } catch (error) { setMessage('❌ Failed to reject task'); }
@@ -121,7 +121,7 @@ const WorkerDashboard = () => {
     const form = materialForms[ticketId];
     if (!form || !form.inventoryId || !form.quantity) return setMessage("⚠️ Fill material fields.");
     try {
-      await axios.put(`http://localhost:5000/api/tickets/${ticketId}/materials`, { inventoryId: form.inventoryId, quantityUsed: Number(form.quantity) });
+      await axios.put(`https://cityfix-backend-2c0d.onrender.com/api/tickets/${ticketId}/materials`, { inventoryId: form.inventoryId, quantityUsed: Number(form.quantity) });
       setMessage(`✅ Material logged!`);
       fetchAllTickets(); fetchInventoryList();
       setMaterialForms(prev => ({ ...prev, [ticketId]: { inventoryId: '', quantity: '' } }));
@@ -131,7 +131,7 @@ const WorkerDashboard = () => {
   const handleCommentSubmit = async (ticketId) => {
     if (!commentText[ticketId]) return;
     try {
-      await axios.post(`http://localhost:5000/api/tickets/${ticketId}/comments`, { senderName: `City Worker (${worker.name})`, text: commentText[ticketId] });
+      await axios.post(`https://cityfix-backend-2c0d.onrender.com/api/tickets/${ticketId}/comments`, { senderName: `City Worker (${worker.name})`, text: commentText[ticketId] });
       setCommentText({ ...commentText, [ticketId]: '' });
       fetchAllTickets();
     } catch (error) { console.error(error); }

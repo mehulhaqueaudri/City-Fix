@@ -18,7 +18,7 @@ const Inventory = () => {
 
   const fetchInventory = async () => {
     try {
-      const response = await axios.get('http://localhost:5000/api/inventory');
+      const response = await axios.get('https://cityfix-backend-2c0d.onrender.com/api/inventory');
       setInventory(response.data);
     } catch (error) {
       console.error("Error fetching inventory", error);
@@ -32,7 +32,7 @@ const Inventory = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await axios.post('http://localhost:5000/api/inventory', formData);
+      await axios.post('https://cityfix-backend-2c0d.onrender.com/api/inventory', formData);
       setMessage('✅ Material added to warehouse!');
       setFormData({ itemName: '', quantity: 0, unit: 'bags', costPerUnit: 0 }); // reset form
       fetchInventory(); // refresh list

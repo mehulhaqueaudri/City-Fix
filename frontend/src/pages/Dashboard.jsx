@@ -40,28 +40,28 @@ const Dashboard = () => {
 
   const fetchAllTickets = async () => {
     try {
-      const response = await axios.get(`http://localhost:5000/api/tickets`);
+      const response = await axios.get(`https://cityfix-backend-2c0d.onrender.com/api/tickets`);
       setTickets(response.data);
     } catch (error) { console.error("Error fetching tickets", error); }
   };
 
   const fetchNotifications = async () => {
     try {
-      const response = await axios.get(`http://localhost:5000/api/system/notifications/${userId}`);
+      const response = await axios.get(`https://cityfix-backend-2c0d.onrender.com/api/system/notifications/${userId}`);
       setNotifications(response.data);
     } catch (error) { console.error("Error fetching notifications", error); }
   };
 
   const markNotificationRead = async (id) => {
     try {
-      await axios.put(`http://localhost:5000/api/system/notifications/${id}/read`);
+      await axios.put(`https://cityfix-backend-2c0d.onrender.com/api/system/notifications/${id}/read`);
       fetchNotifications();
     } catch (error) { console.error("Error marking read", error); }
   };
 
   const handleUpvote = async (ticketId) => {
     try {
-      await axios.put(`http://localhost:5000/api/tickets/${ticketId}/upvote`, { userId });
+      await axios.put(`https://cityfix-backend-2c0d.onrender.com/api/tickets/${ticketId}/upvote`, { userId });
       fetchAllTickets();
     } catch (error) { console.error("Error upvoting", error); }
   };
@@ -69,7 +69,7 @@ const Dashboard = () => {
   const handleCommentSubmit = async (ticketId) => {
     if (!commentText[ticketId]) return;
     try {
-      await axios.post(`http://localhost:5000/api/tickets/${ticketId}/comments`, {
+      await axios.post(`https://cityfix-backend-2c0d.onrender.com/api/tickets/${ticketId}/comments`, {
         senderName: userName,
         text: commentText[ticketId]
       });
@@ -91,7 +91,7 @@ const Dashboard = () => {
     if (image) formData.append('image', image);
 
     try {
-      const response = await axios.post('http://localhost:5000/api/tickets', formData, {
+      const response = await axios.post('https://cityfix-backend-2c0d.onrender.com/api/tickets', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       
@@ -104,7 +104,7 @@ const Dashboard = () => {
 
   const handleRateTicket = async (ticketId, rating) => {
     try {
-      await axios.put(`http://localhost:5000/api/tickets/${ticketId}/rate`, { rating });
+      await axios.put(`https://cityfix-backend-2c0d.onrender.com/api/tickets/${ticketId}/rate`, { rating });
       fetchAllTickets(); 
     } catch (error) { alert(error.response?.data?.message || 'Failed to submit rating.'); }
   };
