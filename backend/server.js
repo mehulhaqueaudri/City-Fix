@@ -1,44 +1,35 @@
+require('dotenv').config(); 
+console.log("TESTING CLOUDINARY CLOUD NAME:", process.env.CLOUDINARY_CLOUD_NAME);
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
-const Ticket = require('./models/Ticket'); 
+
+// Import all your routes
+const ticketRoutes = require('./routes/ticketRoutes'); 
+const authRoutes = require('./routes/authRoutes'); 
+const workerRoutes = require('./routes/workerRoutes');
+const adminRoutes = require('./routes/adminRoutes'); 
+const inventoryRoutes = require('./routes/inventoryRoutes'); // <-- UNCOMMENTED!
 
 const app = express();
+
+// Middleware
 app.use(cors());
 app.use(express.json());
 
 // Connect to local MongoDB
 mongoose.connect('mongodb://127.0.0.1:27017/cityfix')
-  .then(() => console.log("MongoDB Connected"))
+  .then(() => console.log("MongoDB Connected successfully"))
   .catch(err => console.log(err));
 
-// API Route: Send tickets to the frontend
-app.get('/api/tickets', async (req, res) => {
-  try {
-    const tickets = await Ticket.find().sort({ createdAt: -1 });
-    res.json(tickets);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
-// API Route: Receive a new ticket from the frontend and save it
-app.post('/api/tickets', async (req, res) => {
-  try {
-    const newTicket = new Ticket(req.body);
-    const savedTicket = await newTicket.save();
-    res.status(201).json(savedTicket);
-  } catch (err) {
-    res.status(400).json({ message: err.message });
-  }
-});
-// API Route: Delete a ticket by its ID
-app.delete('/api/tickets/:id', async (req, res) => {
-  try {
-    await Ticket.findByIdAndDelete(req.params.id);
-    res.json({ message: "Ticket deleted successfully" });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
+// Tell the app to use your routes
+app.use('/api/tickets', ticketRoutes);
+app.use('/api/auth', authRoutes); 
+app.use('/api/workers', workerRoutes);
+app.use('/api/admin', adminRoutes); 
+app.use('/api/inventory', inventoryRoutes); // <-- UNCOMMENTED!
+app.use('/api/system', require('./routes/systemRoutes'));
+
+
 const PORT = 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
