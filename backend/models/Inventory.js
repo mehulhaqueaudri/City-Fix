@@ -15,6 +15,15 @@ const inventorySchema = new mongoose.Schema({
     quantity: {
         type: Number,
         required: true
+    },
+    unit: { 
+        type: String, 
+        default: 'bags' 
+    },
+    // 🌟 FEATURE 14: Ensure the database remembers the Admin's custom number
+    alarmThreshold: { 
+        type: Number, 
+        default: 10 
     }
 }, { timestamps: true });
 

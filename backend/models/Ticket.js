@@ -26,7 +26,10 @@ const ticketSchema = new mongoose.Schema({
 
     // 🧠 NEW SMART ROUTING FIELDS
     rejectedBy: [{ type: String }], // Keeps track of workers who removed this task
-    isMayorAssigned: { type: Boolean, default: false } // Locks the task to the worker if assigned by Admin
+    isMayorAssigned: { type: Boolean, default: false }, // Locks the task to the worker if assigned by Admin
+    
+    // 🌟 FEATURE 4: DYNAMIC PRIORITY
+    priorityScore: { type: Number, default: 0 } 
 
 }, { timestamps: true });
 

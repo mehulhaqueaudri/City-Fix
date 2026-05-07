@@ -1,3 +1,6 @@
+// 🌟 THE FIX: Force this specific file to load the .env variables first!
+require('dotenv').config(); 
+
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
@@ -18,12 +21,19 @@ const {
     adminAssignTicket 
 } = require('../controllers/ticketController');
 
+// Configure Cloudinary with your .env variables
+cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET
+});
+
 // Cloudinary Image Storage Configuration
 const storage = new CloudinaryStorage({
     cloudinary: cloudinary,
     params: {
         folder: 'cityfix_issues',
-        allowed_formats: ['jpg', 'jpeg', 'png']
+        allowedFormats: ['jpg', 'jpeg', 'png'] // using camelCase here to be safe!
     }
 });
 const upload = multer({ storage });
@@ -46,7 +56,7 @@ router.put('/:id/materials', logMaterialsUsed);
 router.post('/:id/comments', addComment);
 router.put('/:id/rate', rateTicket);
 
-// 🧠 NEW: Smart Dispatch & Mayor Override Routes
+// Smart Routing & Rejection Routes
 router.put('/:id/reject', rejectTask);
 router.put('/:id/admin-assign', adminAssignTicket);
 
