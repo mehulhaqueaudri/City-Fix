@@ -9,26 +9,52 @@ const ticketSchema = new mongoose.Schema({
     category: { type: String, required: true },
     severity: { type: String, default: 'Low' },
     imageUrl: { type: String },
+
+########################################
+// TICKET STATUS FIELD USED FOR ASSIGNMENT, WORKFLOW, SLA, ADMIN VIEW
+########################################
+
     status: { type: String, default: 'Pending' },
+
+########################################
+// WORKER ASSIGNMENT FIELD
+########################################
+
+    assignedWorkerName: { type: String, default: 'Unassigned' },
+
+########################################
+// WORKER REJECTION / REASSIGNMENT FIELD
+########################################
+
+    rejectedBy: [{ type: String }],
+
+########################################
+// ADMIN FORCE-ASSIGN LOCK FIELD
+########################################
+
+    isMayorAssigned: { type: Boolean, default: false },
+
+########################################
+// EXTRA FIELDS USED BY DASHBOARDS AND WORKFLOW
+########################################
+
     upvotedBy: [{ type: String }],
+
     materialsUsed: [{ 
         itemName: String, 
         quantity: Number, 
         cost: Number 
     }],
+
     totalCost: { type: Number, default: 0 },
+
     comments: [{ 
         senderName: String, 
         text: String 
     }],
-    assignedWorkerName: { type: String, default: 'Unassigned' },
+
     resolutionRating: { type: Number, min: 1, max: 5 },
 
-    // 🧠 NEW SMART ROUTING FIELDS
-    rejectedBy: [{ type: String }], // Keeps track of workers who removed this task
-    isMayorAssigned: { type: Boolean, default: false }, // Locks the task to the worker if assigned by Admin
-    
-    // 🌟 FEATURE 4: DYNAMIC PRIORITY
     priorityScore: { type: Number, default: 0 } 
 
 }, { timestamps: true });

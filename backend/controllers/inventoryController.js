@@ -1,5 +1,6 @@
 // backend/controllers/inventoryController.js
 const Inventory = require('../models/Inventory');
+const InventoryCheckout = require('../models/InventoryCheckout');
 
 // @desc    Get all inventory items
 // @route   GET /api/inventory
@@ -72,4 +73,83 @@ const updateStock = async (req, res) => {
     }
 };
 
-module.exports = { getInventory, addMaterial, updateStock };
+// 🌟 FEATURE 14: Update the custom alarm threshold for an item
+// @route   PUT /api/inventory/:id/threshold
+const updateThreshold = async (req, res) => {
+    try {
+        const { alarmThreshold } = req.body;
+        const item = await Inventory.findById(req.params.id);
+        if (!item) return res.status(404).json({ message: 'Item not found' });
+
+        item.alarmThreshold = Number(alarmThreshold);
+        await item.save();
+        res.status(200).json(item);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// 🌟 FEATURE: Standalone Inventory Checkout by Workers
+// @desc    Worker checks out materials from the warehouse (with total cost)
+// @route   POST /api/inventory/checkout
+const checkoutMaterial = async (req, res) => {
+    try {
+        const { workerName, items, purpose } = req.body;
+
+        if (!workerName || !items || items.length === 0) {
+            return res.status(400).json({ message: "Please provide workerName and at least one item." });
+        }
+
+        let grandTotal = 0;
+        const processedItems = [];
+
+        for (const entry of items) {
+            const item = await Inventory.findById(entry.inventoryId);
+            if (!item) return res.status(404).json({ message: `Item not found: ${entry.inventoryId}` });
+            if (item.quantity < entry.quantity) {
+                return res.status(400).json({ message: `Not enough stock for ${item.itemName}. Available: ${item.quantity}` });
+            }
+
+            const totalCost = entry.quantity * item.costPerUnit;
+            grandTotal += totalCost;
+
+            // Deduct from inventory
+            item.quantity -= entry.quantity;
+            await item.save();
+
+            processedItems.push({
+                inventoryId: item._id,
+                itemName: item.itemName,
+                quantity: entry.quantity,
+                costPerUnit: item.costPerUnit,
+                totalCost: totalCost
+            });
+        }
+
+        const checkout = await InventoryCheckout.create({
+            workerName,
+            items: processedItems,
+            grandTotal,
+            purpose: purpose || ''
+        });
+
+        res.status(201).json(checkout);
+    } catch (error) {
+        console.error("Error during checkout:", error);
+        res.status(500).json({ message: "Server error during checkout.", error: error.message });
+    }
+};
+
+// @desc    Get all checkout history
+// @route   GET /api/inventory/checkouts
+const getCheckoutHistory = async (req, res) => {
+    try {
+        const checkouts = await InventoryCheckout.find().sort({ createdAt: -1 });
+        res.status(200).json(checkouts);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// Export ALL functions including the new ones
+module.exports = { getInventory, addMaterial, updateStock, updateThreshold, checkoutMaterial, getCheckoutHistory };

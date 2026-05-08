@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Link, useNavigate } from 'react-router-dom';
+// 🌟 NEW: Importing Recharts for Feature 24 Financial Graph
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 const AdminDashboard = () => {
   const [currentTab, setCurrentTab] = useState('Overview'); 
@@ -16,6 +18,7 @@ const AdminDashboard = () => {
   const [newCostPerUnit, setNewCostPerUnit] = useState('');
   const [newQuantity, setNewQuantity] = useState('');
   const [inventoryMessage, setInventoryMessage] = useState('');
+  const [checkoutHistory, setCheckoutHistory] = useState([]);
 
   const navigate = useNavigate();
   const SLA_LIMIT_MS = 14 * 24 * 60 * 60 * 1000; 
@@ -25,7 +28,8 @@ const AdminDashboard = () => {
     fetchInventory();
     fetchAllWorkers(); 
     fetchInventoryRequests();
-    fetchAuditLogs(); 
+    fetchAuditLogs();
+    fetchCheckoutHistory();
     const interval = setInterval(() => {
       fetchInventoryRequests();
       fetchAuditLogs();
@@ -35,42 +39,50 @@ const AdminDashboard = () => {
 
   const fetchAllTickets = async () => {
     try {
-      const response = await axios.get('https://cityfix-backend-2c0d.onrender.com/api/tickets');
+      const response = await axios.get('http://localhost:5000/api/tickets');
       setTickets(response.data);
     } catch (error) { console.error(error); }
   };
 
   const fetchInventory = async () => {
     try {
-      const response = await axios.get('https://cityfix-backend-2c0d.onrender.com/api/inventory');
+      const response = await axios.get('http://localhost:5000/api/inventory');
       setInventory(response.data);
     } catch (error) { console.error(error); }
   };
 
   const fetchAllWorkers = async () => {
     try {
-      const response = await axios.get('https://cityfix-backend-2c0d.onrender.com/api/workers');
+      const response = await axios.get('http://localhost:5000/api/workers');
       setAllWorkers(response.data);
     } catch (error) { console.error(error); }
   };
 
   const fetchInventoryRequests = async () => {
     try {
-      const response = await axios.get('https://cityfix-backend-2c0d.onrender.com/api/system/inventory-requests');
+      const response = await axios.get('http://localhost:5000/api/system/inventory-requests');
       setInventoryRequests(response.data);
     } catch (error) { console.error(error); }
   };
 
   const fetchAuditLogs = async () => {
     try {
-      const response = await axios.get('https://cityfix-backend-2c0d.onrender.com/api/system/audit-logs');
+      const response = await axios.get('http://localhost:5000/api/system/audit-logs');
       setAuditLogs(response.data);
+    } catch (error) { console.error(error); }
+  };
+
+  // 🌟 FEATURE: Fetch checkout history for all workers
+  const fetchCheckoutHistory = async () => {
+    try {
+      const response = await axios.get('http://localhost:5000/api/inventory/checkouts');
+      setCheckoutHistory(response.data);
     } catch (error) { console.error(error); }
   };
 
   const handleApproveRequest = async (id, status) => {
     try {
-      await axios.put(`https://cityfix-backend-2c0d.onrender.com/api/system/inventory-requests/${id}`, { status });
+      await axios.put(`http://localhost:5000/api/system/inventory-requests/${id}`, { status });
       fetchInventoryRequests();
       if (status === 'Approved') fetchInventory(); 
     } catch (error) { alert("❌ Failed to update request."); }
@@ -80,7 +92,7 @@ const AdminDashboard = () => {
     e.preventDefault();
     if(!broadcastMessage) return;
     try {
-      await axios.post('https://cityfix-backend-2c0d.onrender.com/api/system/notifications/broadcast', { message: `📢 MAYOR BROADCAST: ${broadcastMessage}` });
+      await axios.post('http://localhost:5000/api/system/notifications/broadcast', { message: `📢 MAYOR BROADCAST: ${broadcastMessage}` });
       alert("✅ Broadcast sent to all workers!");
       setBroadcastMessage('');
     } catch (error) { alert("❌ Failed to send broadcast."); }
@@ -89,7 +101,7 @@ const AdminDashboard = () => {
   const handleAddMaterial = async (e) => {
     e.preventDefault();
     try {
-      await axios.post('https://cityfix-backend-2c0d.onrender.com/api/inventory', {
+      await axios.post('http://localhost:5000/api/inventory', {
         itemName: newItemName, costPerUnit: Number(newCostPerUnit), quantity: Number(newQuantity)
       });
       setInventoryMessage('✅ Material registered successfully!');
@@ -102,11 +114,18 @@ const AdminDashboard = () => {
   const handleMayorAssign = async (ticketId, workerName) => {
     if(!workerName) return;
     try {
-      await axios.put(`https://cityfix-backend-2c0d.onrender.com/api/tickets/${ticketId}/admin-assign`, { workerName });
+      await axios.put(`http://localhost:5000/api/tickets/${ticketId}/admin-assign`, { workerName });
       alert(`Ticket assigned to ${workerName} and locked.`);
       fetchAllTickets();
       fetchAuditLogs();
     } catch (error) { alert("❌ Failed to assign ticket."); }
+  };
+
+  const handleThresholdUpdate = async (id, newThreshold) => {
+    try {
+      await axios.put(`http://localhost:5000/api/inventory/${id}/threshold`, { alarmThreshold: newThreshold });
+      setInventory(inventory.map(item => item._id === id ? { ...item, alarmThreshold: newThreshold } : item));
+    } catch (error) { console.error("Error updating threshold", error); }
   };
 
   // ==========================================
@@ -120,11 +139,12 @@ const AdminDashboard = () => {
   const openTickets = tickets.filter(t => t.status !== 'Resolved');
   const breachedTickets = openTickets.filter(t => (now.getTime() - new Date(t.createdAt).getTime()) > SLA_LIMIT_MS);
 
-  // FEATURE 14: Low Stock Alerts
-  const LOW_STOCK_THRESHOLD = 20; 
-  const lowStockItems = inventory.filter(item => item.quantity < LOW_STOCK_THRESHOLD);
+  const lowStockItems = inventory.filter(item => {
+    const threshold = item.alarmThreshold !== undefined ? item.alarmThreshold : 10;
+    return item.quantity <= threshold;
+  });
 
-  // FEATURE 24: Monthly Budget Expenditure
+  // FEATURE 24: Single Month Expenditure for the Top Card
   const monthlyExpenditure = resolvedTickets
     .filter(t => {
       const d = new Date(t.updatedAt);
@@ -132,14 +152,23 @@ const AdminDashboard = () => {
     })
     .reduce((sum, ticket) => sum + (ticket.totalCost || 0), 0);
 
-  // FEATURE 22: Ward/District Heatmap (Only Open Issues)
+  // 🌟 NEW: FEATURE 24 - Full Year Monthly Data for Recharts
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const budgetGraphData = months.map(month => ({ name: month, expense: 0 }));
+  
+  resolvedTickets.forEach(t => {
+    const d = new Date(t.updatedAt);
+    if (d.getFullYear() === currentYear) {
+      budgetGraphData[d.getMonth()].expense += (t.totalCost || 0);
+    }
+  });
+
   const openWardStats = {};
   openTickets.forEach(ticket => {
     openWardStats[ticket.wardNumber] = (openWardStats[ticket.wardNumber] || 0) + 1;
   });
   const hottestWards = Object.entries(openWardStats).sort((a, b) => b[1] - a[1]);
 
-  // FEATURE 21: Average Resolution Time Grouped By Category
   const categoryStats = {};
   resolvedTickets.forEach(ticket => {
     if (!categoryStats[ticket.category]) categoryStats[ticket.category] = { totalTimeMs: 0, count: 0 };
@@ -152,9 +181,6 @@ const AdminDashboard = () => {
     avgHours: (stats.totalTimeMs / stats.count / (1000 * 60 * 60)).toFixed(1)
   })).sort((a, b) => b.avgHours - a.avgHours);
 
-  // FEATURE 23: Normalized Worker Performance (Bayesian Average)
-  let globalTotalRating = 0;
-  let globalRatingCount = 0;
   const workerStats = {};
 
   resolvedTickets.forEach(ticket => {
@@ -164,28 +190,34 @@ const AdminDashboard = () => {
     if (ticket.resolutionRating) {
       workerStats[worker].totalRating += ticket.resolutionRating;
       workerStats[worker].ratingCount += 1;
-      globalTotalRating += ticket.resolutionRating;
-      globalRatingCount += 1;
     }
   });
 
-  // Bayesian Constants
-  const C = globalRatingCount > 0 ? (globalTotalRating / globalRatingCount) : 0; // Mean rating across whole platform
-  const m = 3; // Minimum confidence threshold (needs at least 3 ratings to be considered standard)
+  const maxJobsDone = Math.max(...Object.values(workerStats).map(stats => stats.count), 1);
 
   const rankedWorkers = Object.entries(workerStats).map(([name, stats]) => {
-    const v = stats.ratingCount; // Number of ratings for this worker
-    const R = v > 0 ? (stats.totalRating / v) : 0; // Raw average
-    // Normalized Formula: (v * R + m * C) / (v + m)
-    const normalizedScore = v === 0 ? 0 : ((v * R) + (m * C)) / (v + m);
+    const R = stats.ratingCount > 0 ? (stats.totalRating / stats.ratingCount) : 0;
+    const ratingComponent = R > 0 ? (R / 5) * 70 : 0;
+    const jobComponent = (Math.log1p(stats.count) / Math.log1p(maxJobsDone)) * 30;
+    const performanceScore = ratingComponent + jobComponent;
     
     return { 
       name, 
       jobsDone: stats.count, 
-      rawAvg: R.toFixed(2), 
-      score: normalizedScore.toFixed(2) 
+      rawAvg: stats.ratingCount > 0 ? R.toFixed(2) : 'N/A', 
+      score: performanceScore.toFixed(2) 
     };
-  }).sort((a, b) => b.score - a.score);
+  }).sort((a, b) => {
+    const scoreDiff = Number(b.score) - Number(a.score);
+    if (scoreDiff !== 0) return scoreDiff;
+
+    const avgA = a.rawAvg === 'N/A' ? 0 : Number(a.rawAvg);
+    const avgB = b.rawAvg === 'N/A' ? 0 : Number(b.rawAvg);
+    const ratingDiff = avgB - avgA;
+    if (ratingDiff !== 0) return ratingDiff;
+
+    return b.jobsDone - a.jobsDone;
+  });
 
 
   return (
@@ -208,7 +240,6 @@ const AdminDashboard = () => {
 
         {currentTab === 'Overview' && (
           <>
-            {/* FEATURE 14: Low Stock Alerts */}
             {lowStockItems.length > 0 && (
                <div style={{ background: '#fdedec', padding: '20px', borderRadius: '12px', marginBottom: '20px', border: '1px solid #e74c3c', display: 'flex', alignItems: 'center', gap: '15px' }}>
                  <span style={{ fontSize: '2rem' }}>⚠️</span>
@@ -233,22 +264,41 @@ const AdminDashboard = () => {
               <div style={{ background: 'white', padding: '25px', borderRadius: '12px', borderBottom: '5px solid #3498db' }}><h5 style={{ color: '#7f8c8d', margin: '0 0 10px 0' }}>🚧 Open Issues</h5><h1 style={{ margin: 0, color: '#2980b9', fontSize: '2.5rem' }}>{openTickets.length}</h1></div>
               <div style={{ background: breachedTickets.length > 0 ? '#fdedec' : 'white', padding: '25px', borderRadius: '12px', borderBottom: '5px solid #e74c3c' }}><h5 style={{ color: breachedTickets.length > 0 ? '#c0392b' : '#7f8c8d', margin: '0 0 10px 0', fontWeight: 'bold' }}>🚨 SLA Breaches (&gt;14 Days)</h5><h1 style={{ margin: 0, color: '#e74c3c', fontSize: '2.5rem' }}>{breachedTickets.length}</h1></div>
               
-              {/* FEATURE 24: Correct Monthly Expenditure */}
               <div style={{ background: '#fef9e7', padding: '25px', borderRadius: '12px', borderBottom: '5px solid #f1c40f' }}>
                 <h5 style={{ color: '#d4ac0d', margin: '0 0 10px 0' }}>📅 This Month's Expense</h5>
                 <h1 style={{ margin: 0, color: '#f39c12', fontSize: '2.5rem' }}>৳{monthlyExpenditure}</h1>
               </div>
             </div>
 
+            {/* 🌟 NEW: FEATURE 24 - Recharts Graph for Annual Budget */}
+            <div style={{ background: 'white', padding: '25px', borderRadius: '12px', marginBottom: '30px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
+              <h3 style={{ color: '#2c3e50', borderBottom: '2px solid #eee', paddingBottom: '10px', marginBottom: '20px' }}>📈 Annual Budget Expenditure ({currentYear})</h3>
+              <div style={{ width: '100%', height: 350 }}>
+                <ResponsiveContainer>
+                  <BarChart data={budgetGraphData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#ecf0f1" />
+                    <XAxis dataKey="name" stroke="#7f8c8d" />
+                    <YAxis stroke="#7f8c8d" tickFormatter={(value) => `৳${value}`} />
+                    <Tooltip 
+                      formatter={(value) => [`৳${value}`, 'Monthly Repair Cost']} 
+                      cursor={{fill: '#f4f6f7'}}
+                      contentStyle={{ borderRadius: '8px', border: '1px solid #bdc3c7' }}
+                    />
+                    <Legend />
+                    <Bar dataKey="expense" name="Expenditure (৳)" fill="#27ae60" radius={[6, 6, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '30px' }}>
               
-              {/* FEATURE 23: Normalized Worker Leaderboard */}
               <div style={{ background: 'white', padding: '25px', borderRadius: '12px' }}>
-                <h3 style={{ color: '#2c3e50', borderBottom: '2px solid #eee', paddingBottom: '10px', marginBottom: '20px' }}>🏆 Bayesian Worker Leaderboard</h3>
-                <p style={{ fontSize: '0.8rem', color: '#95a5a6', marginBottom: '15px' }}>*Normalized via (vR + mC) / (v + m) to balance volume vs raw ratings.</p>
+                <h3 style={{ color: '#2c3e50', borderBottom: '2px solid #eee', paddingBottom: '10px', marginBottom: '20px' }}>🏆 Worker Leaderboard</h3>
+                <p style={{ fontSize: '0.8rem', color: '#95a5a6', marginBottom: '15px' }}>*Performance score = 70% average rating + 30% completed job volume, so one 5-star job will not outrank many consistently strong jobs.</p>
                 {rankedWorkers.length > 0 ? (
                   <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.95rem' }}>
-                    <thead><tr style={{ color: '#7f8c8d', borderBottom: '1px solid #eee' }}><th style={{ paddingBottom: '8px' }}>Rank</th><th>Worker</th><th>Jobs</th><th>True Score</th></tr></thead>
+                    <thead><tr style={{ color: '#7f8c8d', borderBottom: '1px solid #eee' }}><th style={{ paddingBottom: '8px' }}>Rank</th><th>Worker</th><th>Jobs</th><th>Score</th></tr></thead>
                     <tbody>
                       {rankedWorkers.map((worker, index) => (
                         <tr key={worker.name} style={{ borderBottom: '1px solid #f9f9f9' }}>
@@ -266,7 +316,6 @@ const AdminDashboard = () => {
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '30px' }}>
-                {/* FEATURE 22: Open Issues Heatmap */}
                 <div style={{ background: 'white', padding: '25px', borderRadius: '12px' }}>
                   <h3 style={{ color: '#2c3e50', borderBottom: '2px solid #eee', paddingBottom: '10px', marginBottom: '20px' }}>🗺️ Open Issue Heatmap Data</h3>
                   {hottestWards.length > 0 ? (
@@ -284,7 +333,6 @@ const AdminDashboard = () => {
                   ) : <p style={{ color: '#7f8c8d' }}>No open issues.</p>}
                 </div>
 
-                {/* FEATURE 21: Avg Resolution by Category */}
                 <div style={{ background: 'white', padding: '25px', borderRadius: '12px' }}>
                   <h3 style={{ color: '#2c3e50', borderBottom: '2px solid #eee', paddingBottom: '10px', marginBottom: '20px' }}>⏱️ Avg Resolution by Type</h3>
                   {resolutionTimeData.length > 0 ? (
@@ -335,15 +383,93 @@ const AdminDashboard = () => {
                 </div>
                 <div style={{ flex: '2', minWidth: '300px' }}>
                   <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-                    <thead><tr style={{ backgroundColor: '#ecf0f1', color: '#7f8c8d' }}><th>Item</th><th>Cost/Unit</th><th>Stock Left</th></tr></thead>
+                    <thead>
+                      <tr style={{ backgroundColor: '#ecf0f1', color: '#7f8c8d' }}>
+                        <th>Item</th>
+                        <th>Cost/Unit</th>
+                        <th>Alarm Threshold</th>
+                        <th>Stock Left</th>
+                      </tr>
+                    </thead>
                     <tbody>
-                      {inventory.map(item => (
-                        <tr key={item._id} style={{ borderBottom: '1px solid #eee' }}><td style={{ padding: '10px' }}>{item.itemName}</td><td style={{ padding: '10px', color: '#c0392b' }}>৳{item.costPerUnit}</td><td style={{ padding: '10px', fontWeight: 'bold' }}>{item.quantity}</td></tr>
-                      ))}
+                      {inventory.map(item => {
+                        const threshold = item.alarmThreshold !== undefined ? item.alarmThreshold : 10;
+                        const isLowStock = item.quantity <= threshold;
+
+                        return (
+                        <tr key={item._id} style={{ 
+                            borderBottom: isLowStock ? '2px solid #e74c3c' : '1px solid #eee',
+                            backgroundColor: isLowStock ? '#fff5f5' : 'transparent',
+                            transition: '0.3s'
+                          }}>
+                          <td style={{ padding: '10px' }}>{item.itemName}</td>
+                          <td style={{ padding: '10px', color: '#c0392b' }}>৳{item.costPerUnit}</td>
+                          
+                          <td style={{ padding: '10px' }}>
+                            <input 
+                              type="number" 
+                              defaultValue={threshold}
+                              onBlur={(e) => handleThresholdUpdate(item._id, e.target.value)}
+                              title="Click away to save"
+                              style={{ width: '70px', padding: '6px', borderRadius: '4px', border: '1px solid #bdc3c7', textAlign: 'center' }}
+                            />
+                          </td>
+
+                          <td style={{ padding: '10px', fontWeight: 'bold' }}>
+                            <span style={{ 
+                              backgroundColor: isLowStock ? '#ffdede' : 'transparent', 
+                              color: isLowStock ? '#e74c3c' : 'inherit', 
+                              padding: isLowStock ? '4px 8px' : '0', 
+                              borderRadius: '8px' 
+                            }}>
+                              {item.quantity}
+                            </span>
+                          </td>
+                        </tr>
+                      )})}
                     </tbody>
                   </table>
                 </div>
               </div>
+            </div>
+
+            {/* 🌟 FEATURE: Checkout History for Mayor */}
+            <div style={{ background: 'white', padding: '25px', borderRadius: '12px', marginTop: '30px', borderLeft: '6px solid #1abc9c' }}>
+              <h3 style={{ color: '#2c3e50', borderBottom: '2px solid #eee', paddingBottom: '10px', marginBottom: '20px' }}>🛒 Material Checkout History (All Workers)</h3>
+              {checkoutHistory.length > 0 ? (
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.95rem' }}>
+                    <thead>
+                      <tr style={{ backgroundColor: '#e8f6f3', color: '#2c3e50', borderBottom: '2px solid #a3d9cd' }}>
+                        <th style={{ padding: '12px' }}>Date</th>
+                        <th style={{ padding: '12px' }}>Worker</th>
+                        <th style={{ padding: '12px' }}>Items Checked Out</th>
+                        <th style={{ padding: '12px' }}>Purpose</th>
+                        <th style={{ padding: '12px', textAlign: 'right' }}>Grand Total</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {checkoutHistory.map(checkout => (
+                        <tr key={checkout._id} style={{ borderBottom: '1px solid #eee', transition: '0.2s' }} onMouseOver={e => e.currentTarget.style.backgroundColor = '#f9f9f9'} onMouseOut={e => e.currentTarget.style.backgroundColor = 'white'}>
+                          <td style={{ padding: '12px', color: '#7f8c8d', fontSize: '0.85rem' }}>{new Date(checkout.createdAt).toLocaleString()}</td>
+                          <td style={{ padding: '12px', fontWeight: 'bold', color: '#d35400' }}>{checkout.workerName}</td>
+                          <td style={{ padding: '12px' }}>
+                            {checkout.items.map((item, i) => (
+                              <div key={i} style={{ marginBottom: '2px' }}>
+                                <strong>{item.quantity}x</strong> {item.itemName} <span style={{ color: '#7f8c8d' }}>(৳{item.costPerUnit}/unit = ৳{item.totalCost})</span>
+                              </div>
+                            ))}
+                          </td>
+                          <td style={{ padding: '12px', color: '#7f8c8d', fontStyle: 'italic' }}>{checkout.purpose || '—'}</td>
+                          <td style={{ padding: '12px', textAlign: 'right', fontWeight: 'bold', color: '#27ae60', fontSize: '1.1rem' }}>৳{checkout.grandTotal}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <p style={{ color: '#7f8c8d', textAlign: 'center', fontStyle: 'italic' }}>No material checkouts recorded yet.</p>
+              )}
             </div>
           </>
         )}
