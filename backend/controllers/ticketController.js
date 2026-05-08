@@ -119,6 +119,9 @@ const updateTicketStatus = async (req, res) => {
 
         const oldStatus = ticket.status;
         ticket.status = req.body.status;
+        if (req.body.status === 'Resolved' && oldStatus !== 'Resolved') {
+            ticket.resolvedAt = new Date();
+        }
         await ticket.save();
 
         await Notification.create({ recipient: ticket.user, message: `🔔 Your report "${ticket.title}" is now ${ticket.status}.` });

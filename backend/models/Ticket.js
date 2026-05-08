@@ -29,7 +29,8 @@ const ticketSchema = new mongoose.Schema({
     isMayorAssigned: { type: Boolean, default: false }, // Locks the task to the worker if assigned by Admin
     
     // 🌟 FEATURE 4: DYNAMIC PRIORITY
-    priorityScore: { type: Number, default: 0 } 
+    priorityScore: { type: Number, default: 0 },
+    resolvedAt: { type: Date }
 
 }, { timestamps: true });
 

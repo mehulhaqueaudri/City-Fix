@@ -64,6 +64,7 @@ const WorkerDashboard = () => {
     } catch (error) { console.error(error); }
   };
 
+<<<<<<< Updated upstream
   // 🌟 FEATURE: Fetch checkout history
   const fetchCheckoutHistory = async () => {
     try {
