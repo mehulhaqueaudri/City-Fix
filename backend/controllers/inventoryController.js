@@ -92,6 +92,7 @@ const updateThreshold = async (req, res) => {
     }
 };
 
+<<<<<<< Updated upstream
 // 🌟 FEATURE: Standalone Inventory Checkout by Workers
 // @desc    Worker checks out materials from the warehouse (with total cost)
 // @route   POST /api/inventory/checkout
