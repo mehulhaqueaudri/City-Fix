@@ -28,9 +28,12 @@ const addMaterial = async (req, res) => {
         const qty = Number(quantity);
         const cost = Number(costPerUnit);
 
-        // 1. Check if an item with the EXACT same name (case-insensitive) AND same cost exists
+        // 🌟 Normalize item name to Title Case so "drainage cover" = "Drainage Cover"
+        const normalizedName = itemName.trim().toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
+
+        // 1. Check if an item with the same name (case-insensitive) AND same cost exists
         const existingItem = await Inventory.findOne({ 
-            itemName: { $regex: new RegExp(`^${itemName}$`, 'i') }, 
+            itemName: { $regex: new RegExp(`^${normalizedName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') }, 
             costPerUnit: cost 
         });
 
@@ -41,9 +44,9 @@ const addMaterial = async (req, res) => {
             return res.status(200).json(existingItem);
         } else {
             // Different Name OR Same Name but Different Price -> Create new row
-            // We store the original case the user typed (e.g., "cement" or "Cement")
+            // Always store as Title Case for consistency
             const newItem = await Inventory.create({ 
-                itemName, 
+                itemName: normalizedName, 
                 quantity: qty, 
                 costPerUnit: cost 
             });

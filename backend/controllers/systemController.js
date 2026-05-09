@@ -72,10 +72,13 @@ const updateRequestStatus = async (req, res) => {
         if (status === 'Approved') {
             let item = await Inventory.findOne({ itemName: request.itemName });
             if (item) {
-                item.quantity += request.quantity;
+                if (item.quantity < request.quantity) {
+                    return res.status(400).json({ message: `Not enough stock for ${request.itemName}. Available: ${item.quantity}` });
+                }
+                item.quantity -= request.quantity;
                 await item.save();
             } else {
-                await Inventory.create({ itemName: request.itemName, costPerUnit: request.costPerUnit, quantity: request.quantity });
+                return res.status(404).json({ message: `Item "${request.itemName}" not found in inventory.` });
             }
         }
 
